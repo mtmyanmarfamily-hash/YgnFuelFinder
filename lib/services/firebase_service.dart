@@ -10,7 +10,6 @@ class FirebaseService {
     });
   }
 
-  // 🔥 Suggestion အတွက် missing ဖြစ်နေတဲ့ function ပါ
   static Future<void> suggestNewStation(Map<String, dynamic> data) async {
     await _db.collection('suggestions').add({
       ...data,
@@ -31,7 +30,7 @@ class FirebaseService {
       'status': status.index,
       'queueMinutes': queueMinutes,
       'fuelAvailability': fuelAvailability,
-      'timestamp': FieldValue.serverTimestamp(),
+      'reportedAt': FieldValue.serverTimestamp(), // 🔥 'reportedAt' လို့ နာမည်ပေးထားပါတယ်
       'userName': userName ?? 'Anonymous',
       'note': note,
     };
@@ -47,10 +46,9 @@ class FirebaseService {
   }
 
   static Stream<List<UserReport>> getReportsStream(String stationId) {
-    // 🔥 includeMetadataChanges: true ကြောင့် အချိန်တွေ ချက်ချင်း update ဖြစ်ပါမယ်
     return _db.collection('reports')
         .where('stationId', isEqualTo: stationId)
-        .snapshots(includeMetadataChanges: true)
+        .snapshots(includeMetadataChanges: true) // 🔥 Metadata change ပါ နားထောင်ပါတယ်
         .map((snapshot) {
           final reports = snapshot.docs
               .map((doc) => UserReport.fromFirestore(doc.data(), doc.id))
