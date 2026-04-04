@@ -88,7 +88,7 @@ class _MainNavigationState extends State<MainNavigation> {
   final List<Widget> _screens = [
     const MapScreen(),
     const ListScreen(),
-    const FavouritesScreen(),
+    const FavouriteScreen(),
     const NotificationScreen(),
     const ProfileScreen(),
   ];
