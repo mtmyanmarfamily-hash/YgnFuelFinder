@@ -30,6 +30,8 @@ class FuelStation {
   final Map<String, bool> availableFuels;
   final int queueMinutes;
   final DateTime lastUpdated;
+  final double lat; // 🔥 Added
+  final double lng; // 🔥 Added
 
   FuelStation({
     required this.id,
@@ -39,6 +41,8 @@ class FuelStation {
     required this.availableFuels,
     required this.queueMinutes,
     required this.lastUpdated,
+    required this.lat,
+    required this.lng,
   });
 
   List<String> get fuelTypes => availableFuels.keys.toList();
@@ -52,6 +56,8 @@ class FuelStation {
       availableFuels: Map<String, bool>.from(json['availableFuels'] ?? {}),
       queueMinutes: (json['queueMinutes'] ?? 0).toInt(),
       lastUpdated: (json['last_update'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      lat: (json['lat'] ?? 16.8661).toDouble(), // Default to Yangon if null
+      lng: (json['lng'] ?? 96.1951).toDouble(),
     );
   }
 }
