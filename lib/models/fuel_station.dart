@@ -1,23 +1,23 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum FuelStatus { open, closed, busy, unknown }
+enum FuelStatus { open, busy, closed, unknown }
 
 extension FuelStatusExtension on FuelStatus {
-  String get emoji {
-    switch (this) {
-      case FuelStatus.open: return '✅';
-      case FuelStatus.closed: return '❌';
-      case FuelStatus.busy: return '⏳';
-      default: return '❓';
-    }
-  }
-
   String get label {
     switch (this) {
       case FuelStatus.open: return 'ဖွင့်သည်';
-      case FuelStatus.closed: return 'ပိတ်သည်';
       case FuelStatus.busy: return 'တန်းစီနေသည်';
-      default: return 'မသိရပါ';
+      case FuelStatus.closed: return 'ပိတ်သည်';
+      case FuelStatus.unknown: return 'မသိရပါ';
+    }
+  }
+
+  String get emoji {
+    switch (this) {
+      case FuelStatus.open: return '✅';
+      case FuelStatus.busy: return '⏳';
+      case FuelStatus.closed: return '❌';
+      case FuelStatus.unknown: return '❓';
     }
   }
 }
@@ -26,35 +26,32 @@ class FuelStation {
   final String id;
   final String name;
   final String address;
-  final double lat;
-  final double lng;
-  final List<String> fuelTypes;
   final FuelStatus status;
+  final Map<String, bool> availableFuels;
   final int queueMinutes;
   final DateTime lastUpdated;
-  final Map<String, bool> availableFuels;
 
   FuelStation({
-    required this.id, required this.name, required this.address,
-    required this.lat, required this.lng, required this.fuelTypes,
-    required this.status, required this.queueMinutes,
-    required this.lastUpdated, required this.availableFuels,
+    required this.id,
+    required this.name,
+    required this.address,
+    required this.status,
+    required this.availableFuels,
+    required this.queueMinutes,
+    required this.lastUpdated,
   });
+
+  List<String> get fuelTypes => availableFuels.keys.toList();
 
   factory FuelStation.fromJson(Map<String, dynamic> json, String id) {
     return FuelStation(
       id: id,
       name: json['name'] ?? '',
       address: json['address'] ?? '',
-      lat: (json['lat'] ?? 0.0).toDouble(),
-      lng: (json['lng'] ?? 0.0).toDouble(),
-      fuelTypes: List<String>.from(json['fuelTypes'] ?? []),
-      status: (json['status'] != null && json['status'] < FuelStatus.values.length)
-          ? FuelStatus.values[json['status']] : FuelStatus.unknown,
-      queueMinutes: json['queueMinutes'] ?? 0,
-      lastUpdated: (json['last_update'] is Timestamp)
-          ? (json['last_update'] as Timestamp).toDate() : DateTime.now(),
+      status: FuelStatus.values[json['status'] ?? 3],
       availableFuels: Map<String, bool>.from(json['availableFuels'] ?? {}),
+      queueMinutes: (json['queueMinutes'] ?? 0).toInt(),
+      lastUpdated: (json['last_update'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 }
@@ -65,9 +62,9 @@ class UserReport {
   final String? userName;
   final FuelStatus status;
   final int queueMinutes;
+  final DateTime reportedAt;
   final String? note;
   final Map<String, bool> fuelAvailability;
-  final DateTime reportedAt;
 
   UserReport({
     required this.id,
@@ -75,23 +72,21 @@ class UserReport {
     this.userName,
     required this.status,
     required this.queueMinutes,
+    required this.reportedAt,
     this.note,
     required this.fuelAvailability,
-    required this.reportedAt,
   });
 
   factory UserReport.fromFirestore(Map<String, dynamic> json) {
     return UserReport(
-      id: json['id'] ?? '',
+      id: '',
       stationId: json['stationId'] ?? '',
       userName: json['userName'],
-      status: (json['status'] != null && json['status'] < FuelStatus.values.length)
-          ? FuelStatus.values[json['status']] : FuelStatus.unknown,
-      queueMinutes: json['queueMinutes'] ?? 0,
+      status: FuelStatus.values[json['status'] ?? 0],
+      queueMinutes: (json['queueMinutes'] ?? 0).toInt(),
+      reportedAt: (json['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
       note: json['note'],
       fuelAvailability: Map<String, bool>.from(json['fuelAvailability'] ?? {}),
-      reportedAt: (json['timestamp'] is Timestamp) 
-          ? (json['timestamp'] as Timestamp).toDate() : DateTime.now(),
     );
   }
 }
