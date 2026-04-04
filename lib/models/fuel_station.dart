@@ -39,6 +39,9 @@ class FuelStation {
     required this.lat, required this.lng,
   });
 
+  // 🔥 ဆိုင်စာရင်းမှာ ဆီအမျိုးအစားလေးတွေပြဖို့ ဒါလိုအပ်ပါတယ်
+  List<String> get fuelTypes => availableFuels.keys.toList();
+
   factory FuelStation.fromJson(Map<String, dynamic> json, String id) {
     return FuelStation(
       id: id,
@@ -74,7 +77,6 @@ class UserReport {
     required this.reportedAt, this.note, required this.fuelAvailability,
   });
 
-  // 🔥 docId ကို parameter အဖြစ်ထည့်သွင်းခြင်း
   factory UserReport.fromFirestore(Map<String, dynamic> json, String docId) {
     return UserReport(
       id: docId,
