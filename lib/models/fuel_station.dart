@@ -39,10 +39,7 @@ class FuelStation {
     required this.lat, required this.lng,
   });
 
-  List<String> get fuelTypes => availableFuels.keys.toList();
-
   factory FuelStation.fromJson(Map<String, dynamic> json, String id) {
-    // 🔥 Data Type Error မတက်အောင် တစ်ခုချင်းစီကို Safe Cast လုပ်ပါသည်
     return FuelStation(
       id: id,
       name: json['name']?.toString() ?? '',
@@ -77,9 +74,10 @@ class UserReport {
     required this.reportedAt, this.note, required this.fuelAvailability,
   });
 
-  factory UserReport.fromFirestore(Map<String, dynamic> json) {
+  // 🔥 docId ကို parameter အဖြစ်ထည့်သွင်းခြင်း
+  factory UserReport.fromFirestore(Map<String, dynamic> json, String docId) {
     return UserReport(
-      id: '',
+      id: docId,
       stationId: json['stationId']?.toString() ?? '',
       userName: json['userName']?.toString(),
       status: json['status'] != null 
