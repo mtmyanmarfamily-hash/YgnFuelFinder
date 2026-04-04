@@ -39,8 +39,6 @@ class FuelStation {
     required this.lat, required this.lng,
   });
 
-  List<String> get fuelTypes => availableFuels.keys.toList();
-
   factory FuelStation.fromJson(Map<String, dynamic> json, String id) {
     return FuelStation(
       id: id,
@@ -77,16 +75,9 @@ class UserReport {
   });
 
   factory UserReport.fromFirestore(Map<String, dynamic> json, String docId) {
+    // 🔥 Firebase timestamp က null ဖြစ်နိုင်တာကို handle လုပ်ခြင်း
     final dynamic ts = json['timestamp'];
-    // 🔥 Server timestamp မကျသေးခင်မှာ Local time ကို လုံးဝမယူဘဲ
-    // ခန့်မှန်းခြေ အချိန်တစ်ခု (ဒါမှမဟုတ် null စစ်ခြင်း) နဲ့ အစားထိုးပါတယ်
-    DateTime date;
-    if (ts is Timestamp) {
-      date = ts.toDate();
-    } else {
-      // Server data မကျသေးခင် ၅ စက္ကန့်လောက် လျှော့တွက်ထားရင် "ယခုလေးတင်" တန်းမပေါ်တော့ပါ
-      date = DateTime.now().subtract(const Duration(seconds: 5));
-    }
+    final DateTime date = (ts is Timestamp) ? ts.toDate() : DateTime.now().subtract(const Duration(seconds: 1));
 
     return UserReport(
       id: docId,
