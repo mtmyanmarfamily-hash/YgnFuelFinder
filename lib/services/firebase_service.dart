@@ -10,7 +10,6 @@ class FirebaseService {
     });
   }
 
-  // 🔥 Error Fix: suggestNewStation method ထည့်သွင်းခြင်း
   static Future<void> suggestNewStation(Map<String, dynamic> data) async {
     await _db.collection('suggestions').add({
       ...data,
@@ -18,32 +17,44 @@ class FirebaseService {
     });
   }
 
-  static Future<void> submitReport(UserReport report) async {
-    await _db.collection('reports').add({
-      'stationId': report.stationId,
-      'status': report.status.index,
-      'queueMinutes': report.queueMinutes,
-      'fuelAvailability': report.fuelAvailability,
+  // 🔥 Error Fix: Named parameters ကို သုံးပြီး Argument များလက်ခံနိုင်အောင် ပြင်ဆင်ခြင်း
+  static Future<void> submitReport({
+    required String stationId,
+    required FuelStatus status,
+    required int queueMinutes,
+    required Map<String, bool> fuelAvailability,
+    String? userName,
+    String? note,
+  }) async {
+    final Map<String, dynamic> reportData = {
+      'stationId': stationId,
+      'status': status.index,
+      'queueMinutes': queueMinutes,
+      'fuelAvailability': fuelAvailability,
       'timestamp': FieldValue.serverTimestamp(),
-      'userName': report.userName,
-      'note': report.note,
-    });
+      'userName': userName ?? 'Anonymous',
+      'note': note,
+    };
+
+    // ၁။ Reports Collection ထဲသို့ အသစ်ထည့်ခြင်း
+    await _db.collection('reports').add(reportData);
     
-    await _db.collection('stations').doc(report.stationId).update({
-      'status': report.status.index,
-      'queueMinutes': report.queueMinutes,
-      'availableFuels': report.fuelAvailability,
+    // ၂။ သက်ဆိုင်ရာ ဆီဆိုင်၏ လက်ရှိ Status ကိုပါ တစ်ခါတည်း Update လုပ်ပေးခြင်း
+    await _db.collection('stations').doc(stationId).update({
+      'status': status.index,
+      'queueMinutes': queueMinutes,
+      'availableFuels': fuelAvailability,
       'last_update': FieldValue.serverTimestamp(),
     });
   }
 
   static Stream<List<UserReport>> getReportsStream(String stationId) {
-  return _db.collection('reports')
-      .where('stationId', isEqualTo: stationId)
-      // 🔥 Timestamp error တက်နိုင်၍ orderBy ကို ခဏဖြုတ်ထားပါသည်
-      .snapshots()
-      .map((snapshot) => snapshot.docs
-          .map((doc) => UserReport.fromFirestore(doc.data()))
-          .toList());
-}
+    return _db.collection('reports')
+        .where('stationId', isEqualTo: stationId)
+        .orderBy('timestamp', descending: true) // 🔥 Index ဆောက်ပြီးလျှင် ဒါကို ပြန်သုံးပါ
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => UserReport.fromFirestore(doc.data()))
+            .toList());
+  }
 }
