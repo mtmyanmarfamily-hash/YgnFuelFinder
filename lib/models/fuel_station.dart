@@ -39,7 +39,7 @@ class FuelStation {
     required this.lat, required this.lng,
   });
 
-  // 🔥 Error တက်နေတဲ့ fuelTypes getter ကို ပြန်ထည့်လိုက်ပါတယ်
+  // 🔥 suggest_station_screen မှာ သုံးဖို့အတွက် fuelTypes ပြန်ထည့်ထားပါတယ်
   List<String> get fuelTypes => availableFuels.keys.toList();
 
   factory FuelStation.fromJson(Map<String, dynamic> json, String id) {
@@ -78,11 +78,11 @@ class UserReport {
   });
 
   factory UserReport.fromFirestore(Map<String, dynamic> json, String docId) {
-    final dynamic ts = json['timestamp'];
-    // 🔥 "ယခုလေးတင်" မဖြစ်အောင် server timestamp မကျခင် ၅ စက္ကန့် လျှော့တွက်ထားပါတယ်
+    // 🔥 Firestore က 'reportedAt' ကို သုံးရပါမယ်
+    final dynamic ts = json['reportedAt']; 
     final DateTime date = (ts is Timestamp) 
         ? ts.toDate() 
-        : DateTime.now().subtract(const Duration(seconds: 5));
+        : DateTime.now().subtract(const Duration(seconds: 1));
 
     return UserReport(
       id: docId,
