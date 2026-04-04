@@ -8,60 +8,61 @@ class FuelFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<FuelProvider>(
-      builder: (context, provider, _) => Container(
-        color: Colors.grey[100],
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(
-          children: [
-            // Fuel type filters
-            ...['92', '95', 'PD', 'D'].map((type) {
-              final selected = provider.selectedFuelTypes.contains(type);
-              return GestureDetector(
-                onTap: () => provider.toggleFuelType(type),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  margin: const EdgeInsets.only(right: 6),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: selected ? Colors.green[700] : Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                        color: selected
-                            ? Colors.green[700]!
-                            : Colors.grey[400]!),
-                  ),
-                  child: Text(
-                    type,
-                    style: TextStyle(
-                      color: selected ? Colors.white : Colors.grey[700],
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
+    final provider = context.watch<FuelProvider>();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      color: Colors.white,
+      child: Column(
+        children: [
+          // ဆီအမျိုးအစား Filter
+          Row(
+            children: ['92', '95', 'PD', 'D'].map((type) {
+              final isSelected = provider.selectedFuelTypes.contains(type);
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: FilterChip(
+                  label: Text(type),
+                  selected: isSelected,
+                  onSelected: (_) => provider.toggleFuelType(type),
                 ),
               );
-            }),
-
-            const Spacer(),
-
-            // Status filter
-            PopupMenuButton<FuelStatus?>(
-              icon: Icon(Icons.filter_list, color: Colors.green[700]),
-              onSelected: provider.setStatusFilter,
-              itemBuilder: (_) => [
-                const PopupMenuItem(value: null, child: Text('အားလုံး')),
-                const PopupMenuItem(
-                    value: FuelStatus.available, child: Text('✅ ဆီရသည်')),
-                const PopupMenuItem(
-                    value: FuelStatus.busy, child: Text('⚠️ တန်းစီရှည်')),
-                const PopupMenuItem(
-                    value: FuelStatus.unavailable, child: Text('❌ ဆီမရဘူး')),
+            }).toList(),
+          ),
+          const Divider(),
+          // 🔥 Error ပြင်ရန်: Status Filter ကို FuelStatus.open/closed သို့ ပြောင်းခြင်း
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _StatusChip(status: FuelStatus.open, label: 'ဖွင့်သည်'),
+                _StatusChip(status: FuelStatus.busy, label: 'တန်းစီနေသည်'),
+                _StatusChip(status: FuelStatus.closed, label: 'ပိတ်သည်'),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  final FuelStatus status;
+  final String label;
+  const _StatusChip({required this.status, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<FuelProvider>();
+    final isSelected = provider.statusFilter == status;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ActionChip(
+        avatar: Text(status.emoji),
+        label: Text(label),
+        backgroundColor: isSelected ? Colors.green[100] : null,
+        onPressed: () => provider.setStatusFilter(status),
       ),
     );
   }
