@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// 🛑 ပွားနေသော status များကို ဖယ်ရှားပြီး ရှင်းလင်းအောင် ထားပါသည်
 enum FuelStatus { open, closed, busy, unknown }
 
 extension FuelStatusExtension on FuelStatus {
@@ -44,19 +43,55 @@ class FuelStation {
 
   factory FuelStation.fromJson(Map<String, dynamic> json, String id) {
     return FuelStation(
-      id: id, // Firestore Document ID ကို တိုက်ရိုက်ယူသည်
+      id: id,
       name: json['name'] ?? '',
       address: json['address'] ?? '',
       lat: (json['lat'] ?? 0.0).toDouble(),
       lng: (json['lng'] ?? 0.0).toDouble(),
       fuelTypes: List<String>.from(json['fuelTypes'] ?? []),
-      // Status index စစ်ဆေးခြင်း
       status: (json['status'] != null && json['status'] < FuelStatus.values.length)
           ? FuelStatus.values[json['status']] : FuelStatus.unknown,
       queueMinutes: json['queueMinutes'] ?? 0,
       lastUpdated: (json['last_update'] is Timestamp)
           ? (json['last_update'] as Timestamp).toDate() : DateTime.now(),
       availableFuels: Map<String, bool>.from(json['availableFuels'] ?? {}),
+    );
+  }
+}
+
+class UserReport {
+  final String id;
+  final String stationId;
+  final String? userName;
+  final FuelStatus status;
+  final int queueMinutes;
+  final String? note;
+  final Map<String, bool> fuelAvailability;
+  final DateTime reportedAt;
+
+  UserReport({
+    required this.id,
+    required this.stationId,
+    this.userName,
+    required this.status,
+    required this.queueMinutes,
+    this.note,
+    required this.fuelAvailability,
+    required this.reportedAt,
+  });
+
+  factory UserReport.fromFirestore(Map<String, dynamic> json) {
+    return UserReport(
+      id: json['id'] ?? '',
+      stationId: json['stationId'] ?? '',
+      userName: json['userName'],
+      status: (json['status'] != null && json['status'] < FuelStatus.values.length)
+          ? FuelStatus.values[json['status']] : FuelStatus.unknown,
+      queueMinutes: json['queueMinutes'] ?? 0,
+      note: json['note'],
+      fuelAvailability: Map<String, bool>.from(json['fuelAvailability'] ?? {}),
+      reportedAt: (json['timestamp'] is Timestamp) 
+          ? (json['timestamp'] as Timestamp).toDate() : DateTime.now(),
     );
   }
 }
