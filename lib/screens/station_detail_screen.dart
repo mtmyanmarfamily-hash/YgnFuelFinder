@@ -31,6 +31,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> with SingleTi
     if (diff.inDays > 0) return '${diff.inDays}d';
     if (diff.inHours > 0) return '${diff.inHours}h';
     if (diff.inMinutes > 0) return '${diff.inMinutes}m';
+    if (diff.inSeconds > 10) return '${diff.inSeconds}s'; // 🔥 ၁၀ စက္ကန့်ကျော်ရင် စက္ကန့်ပြမယ်
     return 'ယခုလေးတင်';
   }
 
@@ -39,7 +40,6 @@ class _StationDetailScreenState extends State<StationDetailScreen> with SingleTi
     final station = Provider.of<FuelProvider>(context).getStationById(widget.stationId);
     if (station == null) return Scaffold(appBar: AppBar(), body: const Center(child: Text('ရှာမတွေ့ပါ')));
 
-    // 🔥 "အခြေအနေ" Tab မှာ ဆိုင်ရဲ့ နောက်ဆုံး Report status တွေကို အလိုအလျောက် ပြပေးခြင်း
     if (_fuelAvailability.isEmpty) {
       _fuelAvailability = Map<String, bool>.from(station.availableFuels);
       _selectedStatus = station.status == FuelStatus.unknown ? FuelStatus.open : station.status;
@@ -137,25 +137,27 @@ class _StationDetailScreenState extends State<StationDetailScreen> with SingleTi
           itemCount: reports.length,
           itemBuilder: (context, i) {
             final r = reports[i];
-            final availableFuels = r.fuelAvailability.entries
-                .where((e) => e.value == true)
-                .map((e) => e.key)
-                .join(', ');
+            final fuels = r.fuelAvailability.entries.where((e) => e.value).map((e) => e.key).join(', ');
 
             return Card(
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: ListTile(
                 leading: CircleAvatar(child: Text(r.status.emoji)),
-                title: Text(r.status.label, style: const TextStyle(fontWeight: FontWeight.bold)),
+                title: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(r.status.label, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(_timeAgo(r.reportedAt), style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  ],
+                ),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (availableFuels.isNotEmpty) Text('ရရှိနိုင်သောဆီ: $availableFuels'),
+                    if (fuels.isNotEmpty) Text('ရရှိနိုင်သောဆီ: $fuels'),
                     Text('တန်းစီချိန်: ${r.queueMinutes} မိနစ်'),
                     if (r.note != null && r.note!.isNotEmpty) Text('💬 ${r.note}'),
                   ],
                 ),
-                trailing: Text(_timeAgo(r.reportedAt), style: const TextStyle(fontSize: 12, color: Colors.grey)),
               ),
             );
           },
