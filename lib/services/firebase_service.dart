@@ -10,6 +10,14 @@ class FirebaseService {
     });
   }
 
+  // 🔥 ဆိုင်အသစ်အကြံပြုချက်အတွက် ဒါလိုအပ်ပါတယ်
+  static Future<void> suggestNewStation(Map<String, dynamic> data) async {
+    await _db.collection('suggestions').add({
+      ...data,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+  }
+
   static Future<void> submitReport({
     required String stationId,
     required FuelStatus status,
@@ -41,9 +49,9 @@ class FirebaseService {
   static Stream<List<UserReport>> getReportsStream(String stationId) {
     return _db.collection('reports')
         .where('stationId', isEqualTo: stationId)
-        .snapshots() // 🔥 orderBy ကြောင့် data မထွက်တာဖြစ်နိုင်လို့ ခဏဖြုတ်ထားပါတယ်
+        .snapshots()
         .map((snapshot) => snapshot.docs
-            .map((doc) => UserReport.fromFirestore(doc.data(), doc.id)) // 🔥 doc.id ထည့်ခြင်း
+            .map((doc) => UserReport.fromFirestore(doc.data(), doc.id))
             .toList());
   }
 }
