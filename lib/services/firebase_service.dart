@@ -10,6 +10,14 @@ class FirebaseService {
     });
   }
 
+  // 🔥 Error Fix: suggestNewStation method ထည့်သွင်းခြင်း
+  static Future<void> suggestNewStation(Map<String, dynamic> data) async {
+    await _db.collection('suggestions').add({
+      ...data,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+  }
+
   static Future<void> submitReport(UserReport report) async {
     await _db.collection('reports').add({
       'stationId': report.stationId,
@@ -18,9 +26,9 @@ class FirebaseService {
       'fuelAvailability': report.fuelAvailability,
       'timestamp': FieldValue.serverTimestamp(),
       'userName': report.userName,
+      'note': report.note,
     });
     
-    // ဆိုင်ရဲ့ status ကိုပါ update လုပ်ပေးခြင်း
     await _db.collection('stations').doc(report.stationId).update({
       'status': report.status.index,
       'queueMinutes': report.queueMinutes,
