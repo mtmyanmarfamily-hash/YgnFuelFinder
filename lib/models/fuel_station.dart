@@ -39,6 +39,9 @@ class FuelStation {
     required this.lat, required this.lng,
   });
 
+  // 🔥 Error တက်နေတဲ့ fuelTypes getter ကို ပြန်ထည့်လိုက်ပါတယ်
+  List<String> get fuelTypes => availableFuels.keys.toList();
+
   factory FuelStation.fromJson(Map<String, dynamic> json, String id) {
     return FuelStation(
       id: id,
@@ -75,9 +78,11 @@ class UserReport {
   });
 
   factory UserReport.fromFirestore(Map<String, dynamic> json, String docId) {
-    // 🔥 Firebase timestamp က null ဖြစ်နိုင်တာကို handle လုပ်ခြင်း
     final dynamic ts = json['timestamp'];
-    final DateTime date = (ts is Timestamp) ? ts.toDate() : DateTime.now().subtract(const Duration(seconds: 1));
+    // 🔥 "ယခုလေးတင်" မဖြစ်အောင် server timestamp မကျခင် ၅ စက္ကန့် လျှော့တွက်ထားပါတယ်
+    final DateTime date = (ts is Timestamp) 
+        ? ts.toDate() 
+        : DateTime.now().subtract(const Duration(seconds: 5));
 
     return UserReport(
       id: docId,
