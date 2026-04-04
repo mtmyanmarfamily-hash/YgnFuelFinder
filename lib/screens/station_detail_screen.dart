@@ -152,41 +152,78 @@ class _StationDetailScreenState extends State<StationDetailScreen>
   }
 
   Widget _buildReportsTab() {
-    return StreamBuilder<List<UserReport>>(
-      stream: FirebaseService.getReportsStream(widget.stationId),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-        if (!snapshot.hasData || snapshot.data!.isEmpty) return const Center(child: Text('သတင်းများ မရှိသေးပါ'));
-        
-        final reports = snapshot.data!;
-        return ListView.builder(
-          itemCount: reports.length,
-          itemBuilder: (context, i) {
-            final r = reports[i];
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Colors.green[100],
-                  child: Text(r.userName != null && r.userName!.isNotEmpty ? r.userName![0] : 'U'),
-                ),
-                title: Text(r.userName ?? 'Anonymous', style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('${r.status.emoji} ${r.status.label} (${r.queueMinutes}m queue)'),
-                    if (r.note != null && r.note!.isNotEmpty) 
-                      Text(r.note!, style: const TextStyle(color: Colors.blueGrey, fontStyle: FontStyle.italic)),
+  Widget _buildReportsTab() {
+  return StreamBuilder<List<UserReport>>(
+    stream: FirebaseService.getReportsStream(widget.stationId),
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+      if (!snapshot.hasData || snapshot.data!.isEmpty) return const Center(child: Text('သတင်းများ မရှိသေးပါ'));
+      
+      final reports = snapshot.data!;
+      return ListView.builder(
+        itemCount: reports.length,
+        itemBuilder: (context, i) {
+          final r = reports[i];
+          
+          // 🔥 ရနိုင်သော ဆီအမျိုးအစားများကို List လုပ်ခြင်း
+          final availableFuels = r.fuelAvailability.entries
+              .where((e) => e.value == true)
+              .map((e) => e.key)
+              .join(', ');
+
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // နာမည်အစား အခြေအနေကို ပိုကြီးကြီးပြပါမည်
+                      Text('${r.status.emoji} ${r.status.label}', 
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      // သတင်းပို့ခဲ့သည့် အချိန် (မိနစ်)
+                      Text(_timeAgo(r.reportedAt), 
+                        style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // 🔥 ရနိုင်သော ဆီအမျိုးအစားများကို ပြသခြင်း
+                  if (availableFuels.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.green[50],
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text('ရရှိနိုင်သောဆီ: $availableFuels', 
+                        style: TextStyle(color: Colors.green[800], fontSize: 13, fontWeight: FontWeight.w500)),
+                    ),
+                  const SizedBox(height: 8),
+                  // တန်းစီချိန်နှင့် မှတ်ချက်
+                  Row(
+                    children: [
+                      const Icon(Icons.access_time, size: 14, color: Colors.orange),
+                      const SizedBox(width: 4),
+                      Text('တန်းစီချိန်: ${r.queueMinutes} မိနစ်', style: const TextStyle(fontSize: 13)),
+                    ],
+                  ),
+                  if (r.note != null && r.note!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text('💬 ${r.note!}', style: const TextStyle(color: Colors.blueGrey, fontStyle: FontStyle.italic)),
                   ],
-                ),
-                trailing: Text(_timeAgo(r.reportedAt), style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                ],
               ),
-            );
-          },
-        );
-      },
-    );
-  }
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
 
   Future<void> _submitReport() async {
     final note = _noteController.text.trim();
