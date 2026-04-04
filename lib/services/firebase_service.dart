@@ -10,6 +10,14 @@ class FirebaseService {
     });
   }
 
+  // 🔥 Suggestion အတွက် missing ဖြစ်နေတဲ့ function ပါ
+  static Future<void> suggestNewStation(Map<String, dynamic> data) async {
+    await _db.collection('suggestions').add({
+      ...data,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+  }
+
   static Future<void> submitReport({
     required String stationId,
     required FuelStatus status,
@@ -23,7 +31,7 @@ class FirebaseService {
       'status': status.index,
       'queueMinutes': queueMinutes,
       'fuelAvailability': fuelAvailability,
-      'timestamp': FieldValue.serverTimestamp(), // 🔥 Server timestamp
+      'timestamp': FieldValue.serverTimestamp(),
       'userName': userName ?? 'Anonymous',
       'note': note,
     };
@@ -39,16 +47,15 @@ class FirebaseService {
   }
 
   static Stream<List<UserReport>> getReportsStream(String stationId) {
-    // 🔥 metadataChanges ကို နားထောင်ခြင်းဖြင့် server timestamp အစစ်မကျခင် estimate ကို ရယူခြင်း
+    // 🔥 includeMetadataChanges: true ကြောင့် အချိန်တွေ ချက်ချင်း update ဖြစ်ပါမယ်
     return _db.collection('reports')
         .where('stationId', isEqualTo: stationId)
-        .snapshots(includeMetadataChanges: true) 
+        .snapshots(includeMetadataChanges: true)
         .map((snapshot) {
           final reports = snapshot.docs
               .map((doc) => UserReport.fromFirestore(doc.data(), doc.id))
               .toList();
           
-          // 🔥 အချိန်အလိုက် နောက်ဆုံးပို့တာအရင်ပြရန် စီခြင်း
           reports.sort((a, b) => b.reportedAt.compareTo(a.reportedAt));
           return reports;
         });
