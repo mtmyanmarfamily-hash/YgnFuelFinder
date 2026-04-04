@@ -27,11 +27,14 @@ class _StationDetailScreenState extends State<StationDetailScreen> with SingleTi
   }
 
   String _timeAgo(DateTime dateTime) {
-    final diff = DateTime.now().difference(dateTime);
+    final now = DateTime.now();
+    final diff = now.difference(dateTime);
+    
+    // 🔥 အချိန်အမှန်ပေါ်စေရန် logic
     if (diff.inDays > 0) return '${diff.inDays}d';
     if (diff.inHours > 0) return '${diff.inHours}h';
     if (diff.inMinutes > 0) return '${diff.inMinutes}m';
-    if (diff.inSeconds > 10) return '${diff.inSeconds}s'; // 🔥 ၁၀ စက္ကန့်ကျော်ရင် စက္ကန့်ပြမယ်
+    if (diff.inSeconds > 5) return '${diff.inSeconds}s'; // ၅ စက္ကန့်ကျော်ရင် စက္ကန့်ပြမယ်
     return 'ယခုလေးတင်';
   }
 
@@ -129,7 +132,9 @@ class _StationDetailScreenState extends State<StationDetailScreen> with SingleTi
     return StreamBuilder<List<UserReport>>(
       stream: FirebaseService.getReportsStream(widget.stationId),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
         if (!snapshot.hasData || snapshot.data!.isEmpty) return const Center(child: Text('သတင်းများ မရှိသေးပါ'));
         
         final reports = snapshot.data!;
@@ -147,6 +152,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> with SingleTi
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(r.status.label, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    // 🔥 အချိန်ကို ညာဘက်မှာပြခြင်း
                     Text(_timeAgo(r.reportedAt), style: const TextStyle(fontSize: 12, color: Colors.grey)),
                   ],
                 ),
