@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/fuel_station.dart';
+import '../models/fuel_alert.dart'; // UserReport အတွက် လိုအပ်ပါက
 import '../services/firebase_service.dart';
 
 class FuelProvider extends ChangeNotifier {
@@ -10,7 +11,6 @@ class FuelProvider extends ChangeNotifier {
   
   // Firestore မှ ရရှိလာသော station အစစ်အမှန်များ သိမ်းဆည်းရန် List
   List<FuelStation> _stations = [];
-
   Set<String> _favouriteIds = {};
   List<String> _selectedFuelTypes = ['92', '95', 'PD', 'D'];
   String _searchQuery = '';
@@ -47,26 +47,19 @@ class FuelProvider extends ChangeNotifier {
     // အရင်ရှိနေတဲ့ subscription ကို cancel လုပ်ပါ
     _firestoreSubscription?.cancel();
 
-    _firestoreSubscription = _firestore
-        .collection('stations')
-        .snapshots()
-        .listen((snapshot) {
-      
-      // Firestore မှ ရလာသော document များကို Model သို့ ပြောင်းလဲခြင်း
-      _stations = snapshot.docs.map((doc) {
-        final data = doc.data();
-        // ကျွန်တော်တို့ ရှေ့မှာ ပြင်ဆင်ခဲ့တဲ့ FuelStation.fromJson ကို အသုံးပြုပါသည်
-        // doc.id ကိုပါ တပါတည်း ပို့ပေးရန် လိုအပ်သည်
-        return FuelStation.fromJson(data, doc.id);
-      }).toList();
-
-      _isLoading = false;
-      notifyListeners();
-    }, onError: (e) {
-      _isLoading = false;
-      debugPrint('Firestore stream error: $e');
-      notifyListeners();
-    });
+    // FirebaseService တွင် ရေးထားသော getStationsStream ကို တိုက်ရိုက် သုံးနိုင်သည်
+    _firestoreSubscription = FirebaseService.getStationsStream().listen(
+      (updatedStations) {
+        _stations = updatedStations;
+        _isLoading = false;
+        notifyListeners(); // UI ကို Data အသစ်ရောက်ကြောင်း အကြောင်းကြားရန်
+      }, 
+      onError: (e) {
+        _isLoading = false;
+        debugPrint('Firestore stream error: $e');
+        notifyListeners();
+      }
+    );
   }
 
   /// Station တစ်ခုချင်းစီ၏ Report များကို Firebase မှ Stream အနေဖြင့် ရယူခြင်း
@@ -84,18 +77,23 @@ class FuelProvider extends ChangeNotifier {
   /// ရှာဖွေမှုနှင့် Filter များအရ ဆီဆိုင်စာရင်းကို စစ်ထုတ်ခြင်း
   List<FuelStation> _filteredStations() {
     return _stations.where((s) {
-      // ဆီအမျိုးအစား ကိုက်ညီမှု ရှိ၊ မရှိ စစ်ဆေးခြင်း
-      final fuelMatch = s.fuelTypes.any((f) => _selectedFuelTypes.contains(f));
-      
-      // ဆီဆိုင် အခြေအနေ (Status) ကိုက်ညီမှု ရှိ၊ မရှိ စစ်ဆေးခြင်း
-      final statusMatch = _statusFilter == null || s.status == _statusFilter;
-      
-      // အမည် သို့မဟုတ် လိပ်စာဖြင့် ရှာဖွေခြင်း
+      // ၁။ အမည် သို့မဟုတ် လိပ်စာဖြင့် ရှာဖွေခြင်း (Search Match)
       final searchMatch = _searchQuery.isEmpty ||
           s.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           s.address.toLowerCase().contains(_searchQuery.toLowerCase());
+
+      if (!searchMatch) return false;
+
+      // ၂။ ဆီဆိုင် အခြေအနေ (Status) ကိုက်ညီမှု ရှိ၊ မရှိ စစ်ဆေးခြင်း
+      final statusMatch = _statusFilter == null || s.status == _statusFilter;
+      if (!statusMatch) return false;
+
+      // ၃။ ဆီအမျိုးအစား ကိုက်ညီမှု ရှိ၊ မရှိ စစ်ဆေးခြင်း (Fuel Type Match)
+      // availableFuels Map ထဲတွင် true ဖြစ်နေသော အမျိုးအစားများကို စစ်သည်
+      final fuelMatch = s.availableFuels.entries.any((entry) => 
+          _selectedFuelTypes.contains(entry.key) && entry.value == true);
           
-      return fuelMatch && statusMatch && searchMatch;
+      return fuelMatch;
     }).toList();
   }
 
@@ -115,7 +113,9 @@ class FuelProvider extends ChangeNotifier {
   // === FILTERS (စစ်ထုတ်ကိရိယာများ) ===
   void toggleFuelType(String type) {
     if (_selectedFuelTypes.contains(type)) {
-      if (_selectedFuelTypes.length > 1) _selectedFuelTypes.remove(type);
+      if (_selectedFuelTypes.length > 1) {
+        _selectedFuelTypes.remove(type);
+      }
     } else {
       _selectedFuelTypes.add(type);
     }
@@ -128,7 +128,8 @@ class FuelProvider extends ChangeNotifier {
   }
 
   void setStatusFilter(FuelStatus? s) {
-    _statusFilter = _statusFilter == s ? null : s;
+    // နှိပ်ပြီးသား status ကို ပြန်နှိပ်ရင် filter ဖြုတ်ရန်
+    _statusFilter = (_statusFilter == s) ? null : s;
     notifyListeners();
   }
 
@@ -138,8 +139,8 @@ class FuelProvider extends ChangeNotifier {
       final p = await SharedPreferences.getInstance();
       final favList = p.getStringList('favourites') ?? [];
       _favouriteIds = Set.from(favList);
-    } catch (_) {
-      debugPrint('Error loading preferences');
+    } catch (e) {
+      debugPrint('Error loading preferences: $e');
     }
   }
 
@@ -147,8 +148,8 @@ class FuelProvider extends ChangeNotifier {
     try {
       final p = await SharedPreferences.getInstance();
       await p.setStringList('favourites', _favouriteIds.toList());
-    } catch (_) {
-      debugPrint('Error saving preferences');
+    } catch (e) {
+      debugPrint('Error saving preferences: $e');
     }
   }
 
