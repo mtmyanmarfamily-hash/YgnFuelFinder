@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import '../models/fuel_station.dart';
-import '../models/fuel_alert.dart'; // 🔥 Import missing model
 import '../providers/fuel_provider.dart';
 import '../services/firebase_service.dart';
-import '../services/alert_service.dart';
 import '../utils/language_filter.dart';
 
 class StationDetailScreen extends StatefulWidget {
@@ -22,30 +19,27 @@ class _StationDetailScreenState extends State<StationDetailScreen>
   late TabController _tabController;
   final _noteController = TextEditingController();
   
-  FuelStatus _selectedStatus = FuelStatus.available;
+  // 🔥 Error Fix: available အစား open ကို သုံးထားပါသည်
+  FuelStatus _selectedStatus = FuelStatus.open; 
   int _queueMinutes = 0;
   bool _submitting = false;
 
   final Map<String, bool> _fuelAvailability = {};
-  FuelAlert? _currentAlert;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this); // Tab ကို ၂ ခုပဲ အရင်ထားပါမည်
     
+    // 🔥 Error Fix: FuelProvider ထဲက getStation ကို ခေါ်ယူခြင်း
     final station = context.read<FuelProvider>().getStation(widget.stationId);
     if (station != null) {
       for (final f in station.fuelTypes) {
         _fuelAvailability[f] = station.availableFuels[f] ?? true;
       }
+      _selectedStatus = station.status;
+      _queueMinutes = station.queueMinutes;
     }
-    _loadAlert();
-  }
-
-  Future<void> _loadAlert() async {
-    final alert = await AlertService.getAlertForStation(widget.stationId);
-    if (mounted) setState(() => _currentAlert = alert);
   }
 
   @override
@@ -77,7 +71,7 @@ class _StationDetailScreenState extends State<StationDetailScreen>
             foregroundColor: Colors.white,
             bottom: TabBar(
               controller: _tabController,
-              tabs: const [Tab(text: 'အခြေအနေ'), Tab(text: 'သတင်းများ'), Tab(text: 'Alert')],
+              tabs: const [Tab(text: 'အခြေအနေ'), Tab(text: 'သတင်းများ')],
             ),
           ),
           body: TabBarView(
@@ -85,7 +79,6 @@ class _StationDetailScreenState extends State<StationDetailScreen>
             children: [
               _buildStatusTab(station),
               _buildReportsTab(),
-              _buildAlertTab(station),
             ],
           ),
         );
@@ -113,6 +106,7 @@ class _StationDetailScreenState extends State<StationDetailScreen>
             }).toList(),
           ),
           const Divider(height: 30),
+          // 🔥 Status ရွေးချယ်မှု (ပွားနေသော status များ မပါတော့ပါ)
           ...FuelStatus.values.where((s) => s != FuelStatus.unknown).map((s) => 
             RadioListTile<FuelStatus>(
               value: s,
@@ -131,15 +125,25 @@ class _StationDetailScreenState extends State<StationDetailScreen>
           ),
           TextField(
             controller: _noteController,
-            decoration: const InputDecoration(hintText: 'မှတ်ချက် (ဥပမာ- ဆီကားရောက်နေသည်)'),
+            decoration: const InputDecoration(
+              hintText: 'မှတ်ချက် (ဥပမာ- ဆီကားရောက်နေသည်)',
+              border: OutlineInputBorder(),
+            ),
           ),
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
+            height: 50,
             child: ElevatedButton(
               onPressed: _submitting ? null : _submitReport,
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.green[700], foregroundColor: Colors.white),
-              child: _submitting ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('သတင်းပို့မည်'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green[700], 
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: _submitting 
+                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
+                : const Text('သတင်းပို့မည်', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ),
         ],
@@ -151,25 +155,31 @@ class _StationDetailScreenState extends State<StationDetailScreen>
     return StreamBuilder<List<UserReport>>(
       stream: FirebaseService.getReportsStream(widget.stationId),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+        if (!snapshot.hasData || snapshot.data!.isEmpty) return const Center(child: Text('သတင်းများ မရှိသေးပါ'));
+        
         final reports = snapshot.data!;
         return ListView.builder(
           itemCount: reports.length,
           itemBuilder: (context, i) {
             final r = reports[i];
             return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: ListTile(
-                leading: CircleAvatar(child: Text(r.userName?[0] ?? 'U')),
-                title: Text(r.userName ?? 'အမည်မသိ', style: const TextStyle(fontWeight: FontWeight.bold)),
+                leading: CircleAvatar(
+                  backgroundColor: Colors.green[100],
+                  child: Text(r.userName != null && r.userName!.isNotEmpty ? r.userName![0] : 'U'),
+                ),
+                title: Text(r.userName ?? 'Anonymous', style: const TextStyle(fontWeight: FontWeight.bold)),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('${r.status.emoji} ${r.status.label}'),
-                    if (r.note != null) Text(r.note!, style: const TextStyle(color: Colors.blueGrey)),
+                    Text('${r.status.emoji} ${r.status.label} (${r.queueMinutes}m queue)'),
+                    if (r.note != null && r.note!.isNotEmpty) 
+                      Text(r.note!, style: const TextStyle(color: Colors.blueGrey, fontStyle: FontStyle.italic)),
                   ],
                 ),
-                trailing: Text(_timeAgo(r.reportedAt), style: const TextStyle(fontSize: 10)),
+                trailing: Text(_timeAgo(r.reportedAt), style: const TextStyle(fontSize: 10, color: Colors.grey)),
               ),
             );
           },
@@ -178,40 +188,42 @@ class _StationDetailScreenState extends State<StationDetailScreen>
     );
   }
 
-  Widget _buildAlertTab(FuelStation station) => const Center(child: Text('Alert settings here')); 
-
   Future<void> _submitReport() async {
-    if (MyanmarLanguageFilter.containsProfanity(_noteController.text)) {
+    final note = _noteController.text.trim();
+    if (note.isNotEmpty && MyanmarLanguageFilter.containsProfanity(note)) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('မယဉ်ကျေးသော စကားလုံးများ ပါဝင်နေပါသည်')));
       return;
     }
 
     setState(() => _submitting = true);
     
-    // 🔥 Current User info from Firebase Auth
     final user = FirebaseAuth.instance.currentUser;
 
+    // 🔥 Error Fix: UserReport constructor ကို Model နှင့် ကိုက်ညီအောင် ပြင်ဆင်ထားပါသည်
     final report = UserReport(
-      id: DateTime.now().millisecondsSinceEpoch.toString(), // 🔥 Unique ID added
+      id: '', // Firebase မှာ ID auto ထွက်ပါမည်
       stationId: widget.stationId,
-      userName: user?.displayName ?? 'Anonymous', // 🔥 UserName added
+      userName: user?.displayName ?? 'Anonymous', 
       status: _selectedStatus,
       queueMinutes: _queueMinutes,
-      fuelType: 'Multiple', 
       reportedAt: DateTime.now(),
-      note: _noteController.text.isEmpty ? null : _noteController.text,
-      fuelAvailability: Map.from(_fuelAvailability),
+      note: note.isEmpty ? null : note,
+      fuelAvailability: Map<String, bool>.from(_fuelAvailability),
     );
     
     try {
       await FirebaseService.submitReport(report);
-      setState(() => _submitting = false);
-      _tabController.animateTo(1);
-      _noteController.clear();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('သတင်းပို့ပြီးပါပြီ')));
+      if (mounted) {
+        setState(() => _submitting = false);
+        _tabController.animateTo(1);
+        _noteController.clear();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('သတင်းပို့ပြီးပါပြီ')));
+      }
     } catch (e) {
-      setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted) {
+        setState(() => _submitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     }
   }
 }
