@@ -13,11 +13,11 @@ class FuelProvider extends ChangeNotifier {
   FuelStatus? _statusFilter;
   StreamSubscription? _firestoreSubscription;
 
-  // 🔥 Getter များကို ပေါင်းထည့်ထားပါသည်
+  // Getter များ
   List<FuelStation> get stations => _filteredStations();
   bool get isLoading => _isLoading;
-  List<String> get selectedFuelTypes => _selectedFuelTypes; // Added
-  FuelStatus? get statusFilter => _statusFilter; // Added
+  List<String> get selectedFuelTypes => _selectedFuelTypes;
+  FuelStatus? get statusFilter => _statusFilter;
   
   List<FuelStation> get favouriteStations => 
       _stations.where((s) => _favouriteIds.contains(s.id)).toList();
@@ -38,13 +38,17 @@ class FuelProvider extends ChangeNotifier {
     });
   }
 
-  FuelStation? getStation(String id) {
+  // 🔥 Build Error Fix: getStationById method ပေါင်းထည့်ခြင်း
+  FuelStation? getStationById(String id) {
     try {
       return _stations.firstWhere((s) => s.id == id);
     } catch (_) {
       return null;
     }
   }
+
+  // ဒါက အရင်ရှိပြီးသား method (နာမည်တူအောင် ထားပေးထားပါသည်)
+  FuelStation? getStation(String id) => getStationById(id);
 
   List<FuelStation> _filteredStations() {
     return _stations.where((s) {
