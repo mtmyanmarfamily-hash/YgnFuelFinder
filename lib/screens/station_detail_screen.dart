@@ -65,7 +65,10 @@ class _StationDetailScreenState extends State<StationDetailScreen> with SingleTi
       ),
       body: TabBarView(
         controller: _tabController,
-        children: [_buildStatusTab(station), _buildReportsTab()],
+        children: [
+          _buildStatusTab(station), // 🔥 Last Updated Info ပါဝင်သော Tab
+          _buildReportsTab(),
+        ],
       ),
     );
   }
@@ -76,8 +79,59 @@ class _StationDetailScreenState extends State<StationDetailScreen> with SingleTi
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // --- 🔥 LAST UPDATED INFO CARD ---
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'နောက်ဆုံးရရှိထားသော အခြေအနေ',
+                  style: TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '${station.status.emoji} ${station.status.label}',
+                      style: TextStyle(
+                        fontSize: 18, 
+                        fontWeight: FontWeight.bold,
+                        color: station.status == FuelStatus.open ? Colors.green[700] : 
+                               station.status == FuelStatus.busy ? Colors.orange[800] : Colors.red[700],
+                      ),
+                    ),
+                    Text(
+                      _timeAgo(station.lastUpdated), // 🔥 အချိန်ပြသရန်
+                      style: TextStyle(color: Colors.blueGrey[600], fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text('တန်းစီချိန်: ~${station.queueMinutes} မိနစ်', style: const TextStyle(fontSize: 15)),
+                if (station.availableFuels.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.top(4.0),
+                    child: Text(
+                      'ရရှိနိုင်သောဆီ: ${station.availableFuels.entries.where((e) => e.value).map((e) => e.key).join(", ")}',
+                      style: const TextStyle(fontSize: 14, color: Colors.black87),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 24),
           const Text('📢 ယခုအခြေအနေ သတင်းပို့ရန်', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
+          
           const Text('ဘယ်ဆီတွေ ရနိုင်သလဲ?'),
           Wrap(
             spacing: 8,
@@ -87,24 +141,38 @@ class _StationDetailScreenState extends State<StationDetailScreen> with SingleTi
               onSelected: (val) => setState(() => _fuelAvailability[f] = val),
             )).toList(),
           ),
+          
           const Divider(height: 32),
+          
           ...FuelStatus.values.where((s) => s != FuelStatus.unknown).map((s) => RadioListTile<FuelStatus>(
             title: Text('${s.emoji} ${s.label}'),
             value: s,
             groupValue: _selectedStatus,
             onChanged: (val) => setState(() => _selectedStatus = val!),
           )),
+          
           const SizedBox(height: 16),
           Text('တန်းစီချိန်: ~$_queueMinutes မိနစ်'),
           Slider(
             value: _queueMinutes.toDouble(),
             min: 0, max: 120, divisions: 12,
+            activeColor: Colors.green[700],
             onChanged: (v) => setState(() => _queueMinutes = v.toInt()),
           ),
-          TextField(controller: _noteController, decoration: const InputDecoration(hintText: 'မှတ်ချက်', border: OutlineInputBorder())),
+          
+          TextField(
+            controller: _noteController, 
+            decoration: const InputDecoration(
+              hintText: 'မှတ်ချက် (ဥပမာ - ဆီကုန်ခါနီးနေပြီ)', 
+              border: OutlineInputBorder()
+            ),
+          ),
+          
           const SizedBox(height: 20),
+          
           SizedBox(
             width: double.infinity,
+            height: 50,
             child: ElevatedButton(
               onPressed: _submitting ? null : () async {
                 setState(() => _submitting = true);
@@ -117,12 +185,18 @@ class _StationDetailScreenState extends State<StationDetailScreen> with SingleTi
                 );
                 setState(() => _submitting = false);
                 _noteController.clear();
-                _tabController.animateTo(1);
+                _tabController.animateTo(1); 
               },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.green[700]),
-              child: _submitting ? const CircularProgressIndicator(color: Colors.white) : const Text('သတင်းပို့မည်', style: TextStyle(color: Colors.white)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green[700],
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: _submitting 
+                  ? const CircularProgressIndicator(color: Colors.white) 
+                  : const Text('သတင်းပို့မည်', style: TextStyle(color: Colors.white, fontSize: 16)),
             ),
           ),
+          const SizedBox(height: 20),
         ],
       ),
     );
@@ -147,12 +221,15 @@ class _StationDetailScreenState extends State<StationDetailScreen> with SingleTi
             return Card(
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: ListTile(
-                leading: CircleAvatar(child: Text(r.status.emoji)),
+                leading: CircleAvatar(
+                  backgroundColor: r.status == FuelStatus.open ? Colors.green[100] : 
+                                  r.status == FuelStatus.busy ? Colors.orange[100] : Colors.red[100],
+                  child: Text(r.status.emoji),
+                ),
                 title: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(r.status.label, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    // 🔥 အချိန်ကို ညာဘက်မှာပြခြင်း
                     Text(_timeAgo(r.reportedAt), style: const TextStyle(fontSize: 12, color: Colors.grey)),
                   ],
                 ),
@@ -161,7 +238,11 @@ class _StationDetailScreenState extends State<StationDetailScreen> with SingleTi
                   children: [
                     if (fuels.isNotEmpty) Text('ရရှိနိုင်သောဆီ: $fuels'),
                     Text('တန်းစီချိန်: ${r.queueMinutes} မိနစ်'),
-                    if (r.note != null && r.note!.isNotEmpty) Text('💬 ${r.note}'),
+                    if (r.note != null && r.note!.isNotEmpty) 
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text('💬 ${r.note}', style: const TextStyle(fontStyle: FontStyle.italic)),
+                      ),
                   ],
                 ),
               ),
