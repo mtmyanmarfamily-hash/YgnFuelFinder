@@ -9,7 +9,6 @@ import 'suggest_station_screen.dart';
 class ListScreen extends StatelessWidget {
   const ListScreen({super.key});
 
-  // အချိန်ကို "ဘယ်နှစ်မိနစ်က" ဟု ပြောင်းလဲပေးသည့် Function
   String _formatTimeAgo(DateTime dateTime) {
     final diff = DateTime.now().difference(dateTime);
     if (diff.inMinutes < 1) return 'ယခုလေးတင်';
@@ -18,27 +17,19 @@ class ListScreen extends StatelessWidget {
     return '${diff.inDays}d';
   }
 
-    Color _statusColor(FuelStatus status) {
+  Color _statusColor(FuelStatus status) {
     switch (status) {
-      // 🔥 'open' နှင့် 'available' နှစ်ခုလုံးကို အစိမ်းရောင် သတ်မှတ်ပါသည်
       case FuelStatus.open:
-      case FuelStatus.available:
         return Colors.green;
-        
       case FuelStatus.busy:
         return Colors.orange;
-        
-      // 🔥 'closed' နှင့် 'unavailable' နှစ်ခုလုံးကို အနီရောင် သတ်မှတ်ပါသည်
       case FuelStatus.closed:
-      case FuelStatus.unavailable:
         return Colors.red;
-        
       case FuelStatus.unknown:
       default:
         return Colors.grey;
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -108,11 +99,14 @@ class ListScreen extends StatelessWidget {
   }
 
   Widget _buildStationCard(BuildContext context, FuelStation s) {
+    final provider = context.read<FuelProvider>();
+    final isFav = context.select<FuelProvider, bool>((p) => p.isFavourite(s.id));
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 2,
-      child: InkWell( // ListTile အစား InkWell သုံးလျှင် UI ပိုမိုထိန်းချုပ်ရလွယ်ပါသည်
+      child: InkWell(
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => StationDetailScreen(stationId: s.id)),
@@ -138,10 +132,27 @@ class ListScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(s.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(s.name, 
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        // 🔥 Favourite Star Icon
+                        GestureDetector(
+                          onTap: () => provider.toggleFavourite(s.id),
+                          child: Icon(
+                            isFav ? Icons.star : Icons.star_border,
+                            color: isFav ? Colors.orange : Colors.grey,
+                            size: 22,
+                          ),
+                        ),
+                      ],
+                    ),
                     Text(s.address, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                     const SizedBox(height: 10),
-                    // ဆီရ/မရ ပြသည့် Wrap
                     Wrap(
                       spacing: 6,
                       runSpacing: 6,
@@ -176,16 +187,10 @@ class ListScreen extends StatelessWidget {
                 children: [
                   const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
                   const SizedBox(height: 8),
-                  // 🔥 ဤနေရာတွင် အချိန်အစစ်ကို တွက်ချက်ပြထားပါသည်
                   Text(
                     _formatTimeAgo(s.lastUpdated),
-                    style: TextStyle(
-                      fontSize: 11, 
-                      color: Colors.grey[700], 
-                      fontWeight: FontWeight.w500
-                    ),
+                    style: TextStyle(fontSize: 11, color: Colors.grey[700], fontWeight: FontWeight.w500),
                   ),
-                  // တန်းစီချိန်ရှိလျှင် ပြရန်
                   if (s.queueMinutes > 0)
                     Container(
                       margin: const EdgeInsets.only(top: 4),
