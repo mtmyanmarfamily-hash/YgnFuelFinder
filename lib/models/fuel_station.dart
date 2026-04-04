@@ -39,7 +39,6 @@ class FuelStation {
     required this.lat, required this.lng,
   });
 
-  // 🔥 ဆိုင်စာရင်းမှာ ဆီအမျိုးအစားလေးတွေပြဖို့ ဒါလိုအပ်ပါတယ်
   List<String> get fuelTypes => availableFuels.keys.toList();
 
   factory FuelStation.fromJson(Map<String, dynamic> json, String id) {
@@ -78,6 +77,10 @@ class UserReport {
   });
 
   factory UserReport.fromFirestore(Map<String, dynamic> json, String docId) {
+    final dynamic ts = json['timestamp'];
+    // 🔥 Firebase က Timestamp အစစ်မကျသေးခင် DateTime.now() ကို သုံးရန်
+    final DateTime date = (ts is Timestamp) ? ts.toDate() : DateTime.now();
+
     return UserReport(
       id: docId,
       stationId: json['stationId']?.toString() ?? '',
@@ -86,7 +89,7 @@ class UserReport {
           ? FuelStatus.values[(json['status'] as num).toInt() % FuelStatus.values.length] 
           : FuelStatus.open,
       queueMinutes: (json['queueMinutes'] as num? ?? 0).toInt(),
-      reportedAt: (json['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      reportedAt: date,
       note: json['note']?.toString(),
       fuelAvailability: json['fuelAvailability'] != null 
           ? Map<String, bool>.from(json['fuelAvailability']) 
