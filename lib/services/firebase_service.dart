@@ -25,7 +25,7 @@ class FirebaseService {
     String? userName,
     String? note,
   }) async {
-    final Map<String, dynamic> reportData = {
+    await _db.collection('reports').add({
       'stationId': stationId,
       'status': status.index,
       'queueMinutes': queueMinutes,
@@ -33,9 +33,7 @@ class FirebaseService {
       'timestamp': FieldValue.serverTimestamp(),
       'userName': userName ?? 'Anonymous',
       'note': note,
-    };
-
-    await _db.collection('reports').add(reportData);
+    });
     
     await _db.collection('stations').doc(stationId).update({
       'status': status.index,
@@ -46,7 +44,6 @@ class FirebaseService {
   }
 
   static Stream<List<UserReport>> getReportsStream(String stationId) {
-    // 🔥 Index Error မတက်စေရန် orderBy ကို ဖြုတ်ပြီး Stream ဆွဲထားပါတယ်
     return _db.collection('reports')
         .where('stationId', isEqualTo: stationId)
         .snapshots()
@@ -55,9 +52,8 @@ class FirebaseService {
               .map((doc) => UserReport.fromFirestore(doc.data(), doc.id))
               .toList();
           
-          // 🔥 ကုဒ်ထဲမှာပဲ အချိန်ကို နောက်ဆုံးပို့တာအရင်ပြရန် စီပေးခြင်း (Sort in code)
+          // 🔥 ကုဒ်ထဲမှာပဲ အချိန်ကို နောက်ဆုံးပို့တာအရင်ပြရန် စီခြင်း
           reports.sort((a, b) => b.reportedAt.compareTo(a.reportedAt));
-          
           return reports;
         });
   }
