@@ -10,7 +10,6 @@ class FirebaseService {
     });
   }
 
-  // 🔥 ဆိုင်အသစ်အကြံပြုချက်အတွက် ဒါလိုအပ်ပါတယ်
   static Future<void> suggestNewStation(Map<String, dynamic> data) async {
     await _db.collection('suggestions').add({
       ...data,
@@ -47,11 +46,19 @@ class FirebaseService {
   }
 
   static Stream<List<UserReport>> getReportsStream(String stationId) {
+    // 🔥 Index Error မတက်စေရန် orderBy ကို ဖြုတ်ပြီး Stream ဆွဲထားပါတယ်
     return _db.collection('reports')
         .where('stationId', isEqualTo: stationId)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => UserReport.fromFirestore(doc.data(), doc.id))
-            .toList());
+        .map((snapshot) {
+          final reports = snapshot.docs
+              .map((doc) => UserReport.fromFirestore(doc.data(), doc.id))
+              .toList();
+          
+          // 🔥 ကုဒ်ထဲမှာပဲ အချိန်ကို နောက်ဆုံးပို့တာအရင်ပြရန် စီပေးခြင်း (Sort in code)
+          reports.sort((a, b) => b.reportedAt.compareTo(a.reportedAt));
+          
+          return reports;
+        });
   }
 }
