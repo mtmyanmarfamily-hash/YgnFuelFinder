@@ -1,0 +1,31 @@
+{
+  "rules": {
+    "stations": {
+      ".read": true,
+      "$id": {
+        ".write": "auth != null",
+        ".validate": "newData.child('status').isNumber()"
+      }
+    },
+    "reports": {
+      ".read": true,
+      "$stationId": {
+        "$reportId": {
+          ".write": "auth != null",
+          ".validate": "newData.child('reportedAt').isString() && newData.child('note').val().length < 200"
+        }
+      }
+    },
+    "suggestions": {
+      ".read": "auth != null",
+      "$id": {
+        ".write": "auth != null",
+        ".validate": "newData.child('name').isString()"
+      }
+    },
+    "roles": {
+      ".read": "auth != null",
+      ".write": false
+    }
+  }
+}
