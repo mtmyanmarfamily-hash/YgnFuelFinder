@@ -76,13 +76,13 @@ class _MapScreenState extends State<MapScreen> {
   Widget _buildMarkerIcon(FuelStatus status) {
     Color color;
     switch (status) {
-      case FuelStatus.available:
+      case FuelStatus.open:
         color = Colors.green;
         break;
       case FuelStatus.busy:
         color = Colors.orange;
         break;
-      case FuelStatus.unavailable:
+      case FuelStatus.closed:
         color = Colors.red;
         break;
       default:
