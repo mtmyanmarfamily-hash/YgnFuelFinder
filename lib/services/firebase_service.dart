@@ -10,13 +10,6 @@ class FirebaseService {
     });
   }
 
-  static Future<void> suggestNewStation(Map<String, dynamic> data) async {
-    await _db.collection('suggestions').add({
-      ...data,
-      'timestamp': FieldValue.serverTimestamp(),
-    });
-  }
-
   static Future<void> submitReport({
     required String stationId,
     required FuelStatus status,
@@ -25,15 +18,17 @@ class FirebaseService {
     String? userName,
     String? note,
   }) async {
-    await _db.collection('reports').add({
+    final reportData = {
       'stationId': stationId,
       'status': status.index,
       'queueMinutes': queueMinutes,
       'fuelAvailability': fuelAvailability,
-      'timestamp': FieldValue.serverTimestamp(),
+      'timestamp': FieldValue.serverTimestamp(), // 🔥 Server timestamp
       'userName': userName ?? 'Anonymous',
       'note': note,
-    });
+    };
+
+    await _db.collection('reports').add(reportData);
     
     await _db.collection('stations').doc(stationId).update({
       'status': status.index,
@@ -44,15 +39,16 @@ class FirebaseService {
   }
 
   static Stream<List<UserReport>> getReportsStream(String stationId) {
+    // 🔥 metadataChanges ကို နားထောင်ခြင်းဖြင့် server timestamp အစစ်မကျခင် estimate ကို ရယူခြင်း
     return _db.collection('reports')
         .where('stationId', isEqualTo: stationId)
-        .snapshots()
+        .snapshots(includeMetadataChanges: true) 
         .map((snapshot) {
           final reports = snapshot.docs
               .map((doc) => UserReport.fromFirestore(doc.data(), doc.id))
               .toList();
           
-          // 🔥 ကုဒ်ထဲမှာပဲ အချိန်ကို နောက်ဆုံးပို့တာအရင်ပြရန် စီခြင်း
+          // 🔥 အချိန်အလိုက် နောက်ဆုံးပို့တာအရင်ပြရန် စီခြင်း
           reports.sort((a, b) => b.reportedAt.compareTo(a.reportedAt));
           return reports;
         });
