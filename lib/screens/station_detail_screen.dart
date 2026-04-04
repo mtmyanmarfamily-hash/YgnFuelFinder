@@ -39,6 +39,14 @@ class _StationDetailScreenState extends State<StationDetailScreen> with SingleTi
     final station = Provider.of<FuelProvider>(context).getStationById(widget.stationId);
     if (station == null) return Scaffold(appBar: AppBar(), body: const Center(child: Text('ရှာမတွေ့ပါ')));
 
+    // 🔥 Default Checked Logic
+    if (_fuelAvailability.isEmpty) {
+      _fuelAvailability = Map<String, bool>.fromIterables(
+        station.availableFuels.keys,
+        List.filled(station.availableFuels.length, true),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(station.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -61,14 +69,6 @@ class _StationDetailScreenState extends State<StationDetailScreen> with SingleTi
   }
 
   Widget _buildStatusTab(FuelStation station) {
-    // 🔥 Default Checked Logic: ဆိုင်မှာရှိတဲ့ဆီကို အလိုအလျောက် အမှန်ခြစ်ထားခြင်း
-    if (_fuelAvailability.isEmpty) {
-      _fuelAvailability = Map<String, bool>.fromIterables(
-        station.availableFuels.keys,
-        List.filled(station.availableFuels.length, true),
-      );
-    }
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -114,9 +114,13 @@ class _StationDetailScreenState extends State<StationDetailScreen> with SingleTi
                   note: _noteController.text,
                 );
                 setState(() => _submitting = false);
-                _tabController.animateTo(1); // သတင်းပို့ပြီးရင် ဒုတိယ Tab ကို ပြောင်းရန်
+                _noteController.clear();
+                _tabController.animateTo(1);
               },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.green[700]),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green[700],
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
               child: _submitting ? const CircularProgressIndicator(color: Colors.white) : const Text('သတင်းပို့မည်', style: TextStyle(color: Colors.white)),
             ),
           ),
@@ -137,13 +141,48 @@ class _StationDetailScreenState extends State<StationDetailScreen> with SingleTi
           itemCount: reports.length,
           itemBuilder: (context, i) {
             final r = reports[i];
+            
+            // 🔥 ရနိုင်သော ဆီအမျိုးအစားများကို List လုပ်ခြင်း
+            final availableFuels = r.fuelAvailability.entries
+                .where((e) => e.value == true)
+                .map((e) => e.key)
+                .join(', ');
+
             return Card(
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: ListTile(
-                leading: CircleAvatar(child: Text(r.userName?[0] ?? 'U')),
-                title: Text(r.userName ?? 'Anonymous', style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text('${r.status.emoji} ${r.status.label} (${r.queueMinutes}m queue)\n${r.note ?? ""}'),
-                trailing: Text(_timeAgo(r.reportedAt), style: const TextStyle(fontSize: 12)),
+              elevation: 2,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: r.status == FuelStatus.open ? Colors.green[600] : (r.status == FuelStatus.busy ? Colors.orange[600] : Colors.red[600]),
+                      borderRadius: const BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('${r.status.emoji} ${r.status.label}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        Text(_timeAgo(r.reportedAt), style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (availableFuels.isNotEmpty)
+                          Text('ရရှိနိုင်သောဆီ: $availableFuels', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text('တန်းစီချိန်: ${r.queueMinutes} မိနစ်'),
+                        if (r.note != null && r.note!.isNotEmpty)
+                          Text('💬 ${r.note!}', style: const TextStyle(fontStyle: FontStyle.italic)),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             );
           },
