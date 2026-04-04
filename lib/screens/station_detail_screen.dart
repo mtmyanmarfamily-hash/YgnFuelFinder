@@ -66,7 +66,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> with SingleTi
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildStatusTab(station), // 🔥 Last Updated Info ပါဝင်သော Tab
+          _buildStatusTab(station),
           _buildReportsTab(),
         ],
       ),
@@ -79,7 +79,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> with SingleTi
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // --- 🔥 LAST UPDATED INFO CARD ---
+          // Last Updated Info Card
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(12),
@@ -109,7 +109,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> with SingleTi
                       ),
                     ),
                     Text(
-                      _timeAgo(station.lastUpdated), // 🔥 အချိန်ပြသရန်
+                      _timeAgo(station.lastUpdated),
                       style: TextStyle(color: Colors.blueGrey[600], fontWeight: FontWeight.bold),
                     ),
                   ],
@@ -118,7 +118,8 @@ class _StationDetailScreenState extends State<StationDetailScreen> with SingleTi
                 Text('တန်းစီချိန်: ~${station.queueMinutes} မိနစ်', style: const TextStyle(fontSize: 15)),
                 if (station.availableFuels.isNotEmpty)
                   Padding(
-                    padding: const EdgeInsets.top(4.0),
+                    // 🔥 FIXED ERROR: EdgeInsets.top(4.0) -> EdgeInsets.only(top: 4.0)
+                    padding: const EdgeInsets.only(top: 4.0), 
                     child: Text(
                       'ရရှိနိုင်သောဆီ: ${station.availableFuels.entries.where((e) => e.value).map((e) => e.key).join(", ")}',
                       style: const TextStyle(fontSize: 14, color: Colors.black87),
@@ -240,7 +241,8 @@ class _StationDetailScreenState extends State<StationDetailScreen> with SingleTi
                     Text('တန်းစီချိန်: ${r.queueMinutes} မိနစ်'),
                     if (r.note != null && r.note!.isNotEmpty) 
                       Padding(
-                        padding: const EdgeInsets.only(top: 4),
+                        // 🔥 FIXED ERROR: EdgeInsets.top(4.0) -> EdgeInsets.only(top: 4.0)
+                        padding: const EdgeInsets.only(top: 4.0), 
                         child: Text('💬 ${r.note}', style: const TextStyle(fontStyle: FontStyle.italic)),
                       ),
                   ],
