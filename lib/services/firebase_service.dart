@@ -38,10 +38,12 @@ class FirebaseService {
   }
 
   static Stream<List<UserReport>> getReportsStream(String stationId) {
-    return _db.collection('reports')
-        .where('stationId', isEqualTo: stationId)
-        .orderBy('timestamp', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => UserReport.fromFirestore(doc.data())).toList());
-  }
+  return _db.collection('reports')
+      .where('stationId', isEqualTo: stationId)
+      // 🔥 Timestamp error တက်နိုင်၍ orderBy ကို ခဏဖြုတ်ထားပါသည်
+      .snapshots()
+      .map((snapshot) => snapshot.docs
+          .map((doc) => UserReport.fromFirestore(doc.data()))
+          .toList());
+}
 }
